@@ -23,6 +23,9 @@ def erro_encontrado():
     global erro
     erro = True
 
+def get_erro():
+    return erro
+
 #funções que checam se as condições do problema estão sendo respeitadas
 def escritores_simultaneos():
     if len(escritores_escrevendo) > 1:
@@ -49,7 +52,6 @@ def log(func):
 #funções que serão chamadas no log gerado pelo programa concorrente
 @log
 def leitor_entrando(id):
-    global vez_do_leitor
     if (not vez_do_leitor) and escritor_esperando():
         print("Leitor {} começando a ler na vez dos escritores {} que esperavam".format(id, escritores_esperando))
         erro_encontrado()
@@ -57,11 +59,9 @@ def leitor_entrando(id):
         print("Leitor {} voltando a ler sem ter registrado a saída".format(id))
         erro_encontrado()
     leitores_lendo.add(id)
-    vez_do_leitor = False
 
 @log
 def escritor_entrando(id):
-    global vez_do_leitor
     if vez_do_leitor and leitor_esperando():
         print("Escritor {} começando a escrever na vez dos leitores {} que esperavam".format(id, leitores_esperando))
         erro_encontrado()
@@ -69,23 +69,26 @@ def escritor_entrando(id):
         print("Escritor {} voltando a escrever sem ter registrado a saída".format(id))
         erro_encontrado()
     escritores_escrevendo.add(id)
-    vez_do_leitor = True
 
 @log
 def leitor_saindo(id):
+    global vez_do_leitor
     if id not in leitores_lendo:
         print("Leitor {} parando de ler sem ter registrado a entrada".format(id))
         erro_encontrado()
     else:
         leitores_lendo.remove(id)
+    vez_do_leitor = False
 
 @log
 def escritor_saindo(id):
+    global vez_do_leitor
     if id not in escritores_escrevendo:
         print("Escritor {} parando de escrever sem ter registrado a entrada".format(id))
         erro_encontrado()
     else:
         escritores_escrevendo.remove(id)
+    vez_do_leitor = True
 
 @log
 def leitor_barrado(id):
@@ -117,7 +120,7 @@ def leitor_saindo_da_espera(id):
 
 @log
 def escritor_saindo_da_espera(id):
-    if id not in leitores_esperando:
+    if id not in escritores_esperando:
         print("Escritor {} saindo da espera sem ter registrado que estava esperando".format(id))
         erro_encontrado()
     else:
