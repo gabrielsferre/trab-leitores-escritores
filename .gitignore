@@ -1,4 +1,4 @@
 __pycache__/
 *.out
-output_leitores/*.txt
+output-leitores/*.txt
 log/log.py
