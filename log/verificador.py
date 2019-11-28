@@ -100,7 +100,7 @@ def escritor_saindo(id):
 
 @log
 def leitor_barrado(id):
-    if not vez_do_leitor and escritor_esperando():
+    if not vez_do_leitor and escritor_esperando() and not escritor_escrevendo():
         print("IMPEDINDO INANIÇÃO :: Leitor {} barrado pois um escritor estava esperando".format(id))
     else:
         print("Leitor {} esperando".format(id))
@@ -115,7 +115,7 @@ def leitor_barrado(id):
 
 @log
 def escritor_barrado(id):
-    if vez_do_leitor and leitor_esperando():
+    if vez_do_leitor and leitor_esperando() and not leitor_lendo():
         print("IMPEDINDO INANIÇÃO :: Escritor {} barrado pois um leitor estava esperando".format(id))
     else:
         print("Escritor {} esperando".format(id))
