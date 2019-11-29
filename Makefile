@@ -8,7 +8,7 @@ ARQUIVO_LOG = log/log.py
 ARGS = 
 
 all: saida.out $(VERIFICADOR)
-	./saida.out $(ARGS) $(ARQUIVO_LOG) > /dev/null
+	./saida.out $(ARGS) $(ARQUIVO_LOG)
 	python $(ARQUIVO_LOG)
 
 saida.out: $(ARQUIVO_C)

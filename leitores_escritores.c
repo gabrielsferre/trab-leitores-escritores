@@ -1,4 +1,6 @@
-#include "../include/conc_util.h"
+#include "include/conc_util.h"
+#include "include/timer.h"
+
 #include <string.h>
 
 #define NOME_DO_ARQUIVO_DO_LEITOR "output-leitores/%d.txt"
@@ -6,6 +8,7 @@
 //frases que serão printadas no log
 #define IMPORT_SCRIPT_PYTHON "from verificador import *\n"
 #define CHECA_ERROS "if not get_erro(): print(\"\\nPassou no teste!\\n\")\n"
+#define TEMPO_EXECUCAO "print(\"Tempo: %.4f segundos\\n\")\n"
 #define LEITOR_ENTRANDO "leitor_entrando(%d)\n"
 #define LEITOR_SAINDO "leitor_saindo(%d)\n"
 #define LEITOR_ESPERANDO "leitor_barrado(%d)\n"
@@ -45,14 +48,14 @@ void inicia_leitura(int id) {
     Pthread_mutex_lock(&mutex);
     while(escritor_escrevendo || (escritores_esperando && !vez_do_leitor)) {
         leitores_esperando++;
-        printf("Leitor %d foi bloqueado\n", id+1);
+        // printf("Leitor %d foi bloqueado\n", id+1);
         fprintf(arquivo_log, LEITOR_ESPERANDO, id+1);
         Pthread_cond_wait(&block_leitores, &mutex);
         fprintf(arquivo_log, LEITOR_SAINDO_ESPERA, id+1);
         leitores_esperando--;
     }
     contador_leitores++;
-    printf("Leitor %d está lendo\n", id+1);
+    // printf("Leitor %d está lendo\n", id+1);
     fprintf(arquivo_log, LEITOR_ENTRANDO, id+1);
     Pthread_mutex_unlock(&mutex);
 }
@@ -61,7 +64,7 @@ void finaliza_leitura(int id) {
     Pthread_mutex_lock(&mutex);
     contador_leitores--;
     vez_do_leitor = 0;  //passa a vez para os escritores
-    printf("Leitor %d finalizando leitura\n", id+1);
+    // printf("Leitor %d finalizando leitura\n", id+1);
     fprintf(arquivo_log, LEITOR_SAINDO, id+1);
     if(escritores_esperando) {
         Pthread_cond_signal(&block_escritores);
@@ -73,14 +76,14 @@ void inicia_escrita(int id) {
     Pthread_mutex_lock(&mutex);
     while( escritor_escrevendo || contador_leitores > 0 || (leitores_esperando && vez_do_leitor) ) {
         escritores_esperando++;
-        printf("Escritor %d foi bloqueado\n", id+1);
+        // printf("Escritor %d foi bloqueado\n", id+1);
         fprintf(arquivo_log, ESCRITOR_ESPERANDO, id+1);
         Pthread_cond_wait(&block_escritores, &mutex);
         fprintf(arquivo_log, ESCRITOR_SAINDO_ESPERA, id+1);
         escritores_esperando--;
     }
     escritor_escrevendo = 1;
-    printf("Escritor %d está escrevendo\n", id+1);
+    // printf("Escritor %d está escrevendo\n", id+1);
     fprintf(arquivo_log, ESCRITOR_ENTRANDO, id+1);
     Pthread_mutex_unlock(&mutex);
 }
@@ -89,7 +92,7 @@ void finaliza_escrita(int id) {
     Pthread_mutex_lock(&mutex);
     escritor_escrevendo = 0;
     vez_do_leitor = 1;  //passa a vez para os leitores
-    printf("Escritor %d finalizando escrita\n", id+1);
+    // printf("Escritor %d finalizando escrita\n", id+1);
     fprintf(arquivo_log, ESCRITOR_SAINDO, id+1);
     if(leitores_esperando) {
         Pthread_cond_broadcast(&block_leitores);
@@ -167,6 +170,11 @@ int main(int argc, char* argv[]) {
     arquivo_log = fopen(nome_do_arquivo_de_log, "w");
     fprintf(arquivo_log, IMPORT_SCRIPT_PYTHON);
 
+    //começa cálculo do tempo de execução
+    double tempo_tmp;
+    double tempo;
+    GET_TIME(tempo_tmp);
+
     //cria leitores
     for(int i = 0; i < numero_leitores; i++) {
         leitores_id[i] = i;
@@ -196,7 +204,12 @@ int main(int argc, char* argv[]) {
         Pthread_join(escritores[i], NULL);
     }
 
+    //tempo de execução
+    GET_TIME(tempo);
+    tempo = tempo - tempo_tmp;
+
     fprintf(arquivo_log, CHECA_ERROS);
+    fprintf(arquivo_log, TEMPO_EXECUCAO, tempo);
     fclose(arquivo_log);
 
     free(arquivos_leitores);
