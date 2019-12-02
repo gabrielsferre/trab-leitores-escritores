@@ -1,4 +1,4 @@
-#include "include/conc_util.h"
+#include "include/conc_util.h" // arquivo contendo os includes gerais
 #include "include/timer.h"
 
 #include <string.h>
@@ -30,7 +30,7 @@ int contador_leitores = 0;      //conta quantos leitores estão lendo
 int leitores_esperando = 0;     //leitores presos no cond_wait
 int escritores_esperando = 0;   //escritores presos no cond_wait
 int escritor_escrevendo = 0;
-int vez_do_leitor = 1;
+int vez_do_leitor = 1; // variavel de controle para auxiliar na logica de alternancia
 
 //entrada (menos o nome do arquivo de log)
 int numero_leitores = 0;
@@ -46,6 +46,10 @@ FILE* arquivo_log;
 
 void inicia_leitura(int id) {
     Pthread_mutex_lock(&mutex);
+    
+    // ao inves de somente checar se existe um escritor ativo (como no caso usual), também é checado se
+    // temos escritores aguardando E nao for vez do leitor
+    // esse OU vai garantir que os leitores nao mantenham escritores em inanicao, devido a uma logica de alternancia
     while(escritor_escrevendo || (escritores_esperando && !vez_do_leitor)) {
         leitores_esperando++;
         // printf("Leitor %d foi bloqueado\n", id+1);
@@ -74,6 +78,10 @@ void finaliza_leitura(int id) {
 
 void inicia_escrita(int id) {
     Pthread_mutex_lock(&mutex);
+    
+    // ao inves de somente checar se existe escritor ativo ou leitores ativos, agora também checa-se se
+    // existem leitores aguardando E se é a vez de leitores
+    // essas checagens vao garantir que os escritores nao mantenham os leitores em inanicao
     while( escritor_escrevendo || contador_leitores > 0 || (leitores_esperando && vez_do_leitor) ) {
         escritores_esperando++;
         // printf("Escritor %d foi bloqueado\n", id+1);
@@ -103,6 +111,7 @@ void finaliza_escrita(int id) {
     Pthread_mutex_unlock(&mutex);
 }
 
+// funcoes para as threads leitores/escritoras seguindo a logica usual de leitor-escritor
 void* leitura(void* arg) {
 
     int id = *(int*)arg;
@@ -158,6 +167,7 @@ int main(int argc, char* argv[]) {
     char nome_do_arquivo_de_log[256];
     strncpy(nome_do_arquivo_de_log, argv[5], 255);
 
+    // faz alocacoes necessarias
     arquivos_leitores = (FILE**)Malloc(sizeof(FILE*) * numero_leitores);
 
     pthread_t *leitores = (pthread_t*)Malloc(sizeof(pthread_t) * numero_leitores);
@@ -208,10 +218,12 @@ int main(int argc, char* argv[]) {
     GET_TIME(tempo);
     tempo = tempo - tempo_tmp;
 
+    // imprime no arquivo de log as referencias de checagem de erro e tempo de execucao
     fprintf(arquivo_log, CHECA_ERROS);
     fprintf(arquivo_log, TEMPO_EXECUCAO, tempo);
     fclose(arquivo_log);
 
+    // libera as variaveis que foram alocadas
     free(arquivos_leitores);
     free(leitores);
     free(escritores);
